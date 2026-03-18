@@ -1156,8 +1156,6 @@ require a large number of updates to be processed rapidly.
 
 =head1 BUGS
 
-=head1 BUGS
-
 The each() call produces a fatal error when used with the Sybase
 driver to access Microsoft SQL server. This is because this server
 only allows one query to be active at a given time.  A workaround is

@@ -1,4 +1,4 @@
-[![](https://github.com/toddr/Tie-DBI/workflows/linux/badge.svg)](https://github.com/toddr/Tie-DBI/actions) [![](https://github.com/toddr/Tie-DBI/workflows/macos/badge.svg)](https://github.com/toddr/Tie-DBI/actions) [![](https://github.com/toddr/Tie-DBI/workflows/windows/badge.svg)](https://github.com/toddr/Tie-DBI/actions)
+[![](https://github.com/cpan-authors/Tie-DBI/workflows/testsuite/badge.svg)](https://github.com/cpan-authors/Tie-DBI/actions)
 
 # NAME
 
