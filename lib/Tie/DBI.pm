@@ -150,9 +150,26 @@ sub TIEHASH {
 }
 
 sub DESTROY {
-    $_[0]->{'dbh'}->disconnect
-      if defined $_[0]->{'dbh'}
-      && $_[0]->{needs_disconnect};
+    my $self = shift;
+    return unless $self->{'dbh'};
+
+    # Explicitly finish and remove all cached statement handles before
+    # the hash is torn down.  During global destruction (or even normal
+    # hash teardown), values are freed in undefined order.  If the dbh
+    # is freed before a cached sth, the sth DESTROY calls
+    # sqlite3_finalize (or equivalent) on a stale handle, causing SEGV.
+    # Deleting the references here ensures no DBI child objects survive
+    # in this hash past DESTROY.
+    # See: https://github.com/cpan-authors/Tie-DBI/issues/7
+    for my $key (keys %$self) {
+        next unless ref $self->{$key};
+        next unless ref($self->{$key}) =~ /^DBI::/;
+        eval { $self->{$key}->finish };
+        delete $self->{$key};
+    }
+
+    eval { $self->{'dbh'}->disconnect } if $self->{needs_disconnect};
+    delete $self->{'dbh'};
 }
 
 sub FETCH {
@@ -413,7 +430,11 @@ sub _fields {
         my ( $dbh, $table ) = @{$self}{ 'dbh', 'table' };
 
         local ($^W) = 0;    # kill uninitialized variable warning
-        my $sth = $dbh->prepare("LISTFIELDS $table") unless ( $self->{CannotListfields} );
+        # NOTE: Do NOT use "my $sth = EXPR unless COND" — that is
+        # undefined behavior per perlsyn and leaks the sth handle past
+        # scope exit, causing SEGV during global destruction (GH #7).
+        my $sth;
+        $sth = $dbh->prepare("LISTFIELDS $table") unless ( $self->{CannotListfields} );
 
         # doesn't support LISTFIELDS, so try SELECT *
         unless ( !$self->{CannotListfields} && defined($sth) && $sth->execute ) {

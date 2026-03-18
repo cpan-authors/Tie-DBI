@@ -190,3 +190,14 @@ $before                         = TEST_STRING_WITH_QUESTION_MARK;
 $h{strawberries}->{description} = $before;
 $after                          = $h{strawberries}->{description};
 is( $after, $before, 'question marks can appear in text fields' );
+
+# Explicit cleanup to avoid SEGV during global destruction (GH #7).
+# All DBI objects must be freed before global destruction begins,
+# otherwise hash teardown order may free the dbh before cached
+# statement handles, causing SEGV in sqlite3_finalize.
+undef $value;
+undef $array;
+undef $another_array;
+untie %h;
+eval { $dbh->disconnect } if $dbh;
+undef $dbh;
