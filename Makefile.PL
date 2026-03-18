@@ -26,10 +26,10 @@ WriteMakefile(
             'DBD::SQLite' => 0,                             # Make sure at least one DBD is there for automated testing
         },
         resources => {
-            license  => 'http://dev.perl.org/licenses/',
-            homepage => 'http://wiki.github.com/toddr/Tie-DBI/',
-            bugtracker => 'http://github.com/toddr/Tie-DBI/issues',
-            repository => 'http://github.com/toddr/Tie-DBI',
+            license  => 'https://dev.perl.org/licenses/',
+            homepage => 'https://github.com/cpan-authors/Tie-DBI',
+            bugtracker => 'https://github.com/cpan-authors/Tie-DBI/issues',
+            repository => 'https://github.com/cpan-authors/Tie-DBI',
         },
     },
   )
