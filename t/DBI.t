@@ -6,7 +6,7 @@ my $DRIVER = $ENV{DRIVER};
 use constant USER   => $ENV{USER} || $ENV{DBI_USER};
 use constant PASS   => $ENV{PASS} || $ENV{DBI_PASS};
 use constant DBNAME => $ENV{DB}   || 'test';
-use constant HOST   => $ENV{HOST} || ( $^O eq 'cygwin' ) ? '127.0.0.1' : 'localhost';
+use constant HOST   => $ENV{HOST} || ( ( $^O eq 'cygwin' ) ? '127.0.0.1' : 'localhost' );
 
 use DBI;
 use Tie::DBI;

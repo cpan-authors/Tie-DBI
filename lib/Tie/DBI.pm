@@ -465,7 +465,7 @@ sub _types {
     return $self->{'types'} = \%types;
 }
 
-sub _fetch_field ($$) {
+sub _fetch_field {
     my ( $s, $key, $fields ) = @_;
     $key = $s->_quote( $s->{key}, $key ) unless $s->{CanBindSelect};
     my $valid = $s->_fields();
@@ -577,7 +577,7 @@ sub _quote {
     }
 }
 
-sub _prepare ($$$) {
+sub _prepare {
     my ( $self, $tag, $q ) = @_;
     unless ( exists( $self->{$tag} ) ) {
         return undef unless $q;
