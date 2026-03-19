@@ -49,7 +49,7 @@ my %DefaultOptions = (
 
 sub TIEHASH {
     my $class = shift;
-    my ( $dsn, $opt ) = ref( $_[0] ) ? ( undef, $_[0] ) : @_;
+    my ( $dsn, $opt ) = ref( $_[0] ) eq 'HASH' ? ( undef, $_[0] ) : @_;
     $dsn ||= $opt->{'db'};
 
     croak "Usage tie(%h,Tie::RDBM,<DBI_data_source>,\%options)" unless $dsn;
@@ -63,6 +63,8 @@ sub TIEHASH {
     }
 
     my ( $dbh, $driver );
+
+    my $needs_disconnect = 0;
 
     if ( UNIVERSAL::isa( $dsn, 'DBI::db' ) ) {
         $dbh    = $dsn;
@@ -86,6 +88,7 @@ sub TIEHASH {
             }
         );
         croak "TIEHASH: Can't open $dsn, $DBI::errstr" unless $dbh;
+        $needs_disconnect = 1;
     }
 
     # A variety of shinanegans to handle freeze/thaw option.
@@ -147,15 +150,16 @@ sub TIEHASH {
     }
 
     return bless {
-        'dbh'          => $dbh,
-        'table'        => $opt->{'table'},
-        'key'          => $opt->{'key'},
-        'value'        => $opt->{'value'},
-        'frozen'       => $opt->{'frozen'},
-        'canfreeze'    => $canfreeze,
-        'brokenselect' => $driver eq 'mSQL' || $driver eq 'mysql',
-        'canbind'      => $CAN_BIND{$driver},
-        'DEBUG'        => $opt->{DEBUG},
+        'dbh'              => $dbh,
+        'table'            => $opt->{'table'},
+        'key'              => $opt->{'key'},
+        'value'            => $opt->{'value'},
+        'frozen'           => $opt->{'frozen'},
+        'canfreeze'        => $canfreeze,
+        'brokenselect'     => $driver eq 'mSQL' || $driver eq 'mysql',
+        'canbind'          => $CAN_BIND{$driver},
+        'needs_disconnect' => $needs_disconnect,
+        'DEBUG'            => $opt->{DEBUG},
     }, $class;
 }
 
@@ -272,7 +276,7 @@ sub DESTROY {
     foreach (qw/fetch update insert delete clear exists fetchkeys/) {
         $self->{$_}->finish if $self->{$_};
     }
-    $self->{'dbh'}->disconnect() if $self->{'dbh'};
+    $self->{'dbh'}->disconnect() if $self->{'dbh'} && $self->{needs_disconnect};
 }
 
 sub commit {

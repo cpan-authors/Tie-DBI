@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 19;
+use Test::More tests => 21;
 
 my $DRIVER = $ENV{DRIVER};
 use constant USER   => $ENV{USER};
@@ -67,3 +67,20 @@ my %i;
 isa_ok( tie( %i, 'Tie::RDBM', $dsn, { table => 'PData', user => USER, password => PASS } ), 'Tie::RDBM' );
 is( $i{'george'}, 42 );
 is( join( " ", sort keys %i ), "fred george ricky" );
+untie %i;
+
+# Test that passing an external dbh doesn't disconnect it on untie.
+# Before the needs_disconnect fix, Tie::RDBM would unconditionally
+# disconnect the caller's handle in DESTROY, breaking ongoing work.
+my $ext_dbh = DBI->connect( $dsn, USER, PASS, { PrintError => 0 } )
+    || die "Can't connect for external dbh test: $DBI::errstr";
+my %ext;
+tie( %ext, 'Tie::RDBM', $ext_dbh, { table => 'PData' } );
+untie %ext;
+ok( $ext_dbh->ping, 'external dbh still alive after untie' );
+eval { $ext_dbh->disconnect };
+
+# Explicit cleanup to avoid SEGV during global destruction (GH #7).
+# All DBI objects must be freed before global destruction begins.
+undef $ext_dbh;
+ok( 1, 'cleanup complete' );
