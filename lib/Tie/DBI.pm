@@ -858,7 +858,7 @@ the contents of SQL statements and other debugging information to
 standard error.  Higher values of DEBUG result in more verbose (and
 annoying) output.
 
-=item WARN (default 1)
+=item WARN (default 0)
 
 If set to a non-zero value, warns of illegal operations, such as
 attempting to delete the value of the key column.  If set to a zero

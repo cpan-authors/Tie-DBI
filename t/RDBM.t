@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 21;
+use Test::More;
 
 my $DRIVER = $ENV{DRIVER};
 use constant USER   => $ENV{USER};
@@ -21,10 +21,11 @@ unless ($DRIVER) {
 }
 
 if ($DRIVER) {
+    plan tests => 21;
     diag("RDBM.t - Using DBD driver $DRIVER...");
 }
 else {
-    die "Found no DBD driver to use.\n";
+    plan skip_all => "Found no DBD driver to use.\n";
 }
 
 my $dsn;
