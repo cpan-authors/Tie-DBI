@@ -162,6 +162,7 @@ sub DESTROY {
     # in this hash past DESTROY.
     # See: https://github.com/cpan-authors/Tie-DBI/issues/7
     for my $key (keys %$self) {
+        next if $key eq 'dbh';    # disconnect dbh separately below
         next unless ref $self->{$key};
         next unless ref($self->{$key}) =~ /^DBI::/;
         eval { $self->{$key}->finish };
