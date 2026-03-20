@@ -345,7 +345,7 @@ sub _run_query {
     return $sth;
 }
 
-sub _prepare ($$$) {
+sub _prepare {
     my ( $self, $tag, $q ) = @_;
     unless ( exists( $self->{$tag} ) ) {
         return undef unless $q;
