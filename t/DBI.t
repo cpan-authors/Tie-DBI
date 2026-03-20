@@ -26,7 +26,7 @@ unless ($DRIVER) {
 }
 
 if ($DRIVER) {
-    plan tests => 27;
+    plan tests => 28;
     diag("DBI.t - Using DBD driver $DRIVER...");
 }
 else {
@@ -190,6 +190,24 @@ $before                         = TEST_STRING_WITH_QUESTION_MARK;
 $h{strawberries}->{description} = $before;
 $after                          = $h{strawberries}->{description};
 is( $after, $before, 'question marks can appear in text fields' );
+
+# Test that DESTROY disconnects when Tie::DBI owns the connection.
+# The SEGV-fix loop in DESTROY must not delete the dbh before
+# the disconnect call, or connections created via DSN will leak.
+{
+    my $dsn;
+    if    ( $ENV{DBI_DSN} )   { $dsn = $ENV{DBI_DSN}; }
+    elsif ( $DRIVER eq 'Pg' ) { $dsn = "dbi:$DRIVER:dbname=${\DBNAME}"; }
+    else                      { $dsn = "dbi:$DRIVER:${\DBNAME}:${\HOST}"; }
+
+    my %dsn_hash;
+    tie( %dsn_hash, 'Tie::DBI', $dsn, 'testTie', 'produce_id',
+        { CLOBBER => 0, WARN => 0, user => USER, password => PASS } );
+    my $internal_dbh = tied(%dsn_hash)->dbh;
+    untie %dsn_hash;
+    ok( !$internal_dbh->ping, 'DSN-created dbh is disconnected after untie' );
+    undef $internal_dbh;
+}
 
 # Explicit cleanup to avoid SEGV during global destruction (GH #7).
 # All DBI objects must be freed before global destruction begins,
