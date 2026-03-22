@@ -19,6 +19,7 @@ our %Types = (    # key          value          frozen    freeze  keyless
     'Informix' => [qw/ nchar(120)    nchar(2000)    integer   0          0 /],
     'Solid'    => [qw/ varchar(255)  varbinary(2000) integer  1          0 /],
     'ODBC'     => [qw/ varchar(255)  varbinary(2000) integer   1         0 /],
+    'SQLite'   => [qw/ varchar(255)  blob           integer   1          0 /],
     'default'  => [qw/ varchar(255)  varchar(255)   integer   0          0 /],    #others
 );
 
@@ -31,6 +32,7 @@ my %CAN_BIND = (
     'Informix' => 1,
     'Solid'    => 1,
     'ODBC'     => 1,
+    'SQLite'   => 1,
 );
 
 # Default options for the module

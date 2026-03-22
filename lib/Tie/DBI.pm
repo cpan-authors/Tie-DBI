@@ -39,6 +39,7 @@ my %CAN_BIND = (
     'PO'       => 1,
     'Informix' => 1,
     'Solid'    => 1,
+    'SQLite'   => 1,
 );
 my %CANNOT_LISTFIELDS = (
     'SQLite'  => 1,
@@ -61,6 +62,7 @@ my %CAN_BINDSELECT = (
     'Informix' => 1,
     'Solid'    => 1,
     'ODBC'     => 1,
+    'SQLite'   => 1,
 );
 my %BROKEN_INSERT = (
     'mSQL' => 1,
@@ -78,6 +80,7 @@ my %DOES_IN = (
     'AnyData' => 1,
     'Sys'     => 1,
     'PO'      => 1,
+    'SQLite'  => 1,
 );
 
 # TIEHASH interface
