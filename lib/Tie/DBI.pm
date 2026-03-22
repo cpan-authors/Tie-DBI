@@ -5,7 +5,7 @@ use warnings;
 use 5.006;
 use Carp;
 use DBI;
-our $VERSION = '1.08';
+our $VERSION = '1.09';
 
 BEGIN {
     eval {

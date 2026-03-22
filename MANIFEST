@@ -1,9 +1,9 @@
 Changes
-MANIFEST
-MANIFEST.SKIP
-Makefile.PL
-README.md
 lib/Tie/DBI.pm
 lib/Tie/RDBM.pm
+Makefile.PL
+MANIFEST
+MANIFEST.SKIP
+README.md
 t/DBI.t
 t/RDBM.t

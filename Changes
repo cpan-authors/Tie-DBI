@@ -1,5 +1,25 @@
 Revision history for Perl extension Tie::DBI.
 
+1.09 Sun Mar 22 2026 Todd Rinaldo
+
+    [Bug Fixes]
+    - Fix SEGV during global destruction in t/DBI.t (GH #7, PR #8)
+    - Fix RDBM.pm disconnecting caller's external dbh handle on untie (PR #14)
+    - Fix DESTROY loop deleting dbh before disconnect runs (PR #15)
+    - Fix operator precedence bug in HOST constant and remove misleading
+      prototypes (PR #12)
+    - Fix RDBM.t operator precedence bug and missing test cleanup (PR #13)
+    - Add SQLite to driver capability hashes (PR #17)
+
+    [Improvements]
+    - RDBM.t graceful skip_all when no driver available and correct WARN
+      default in POD (PR #16)
+
+    [Maintenance]
+    - Modernize CI: consolidate workflows and update to current actions
+      (GH #9, PR #10)
+    - Update stale GitHub URLs and remove duplicate POD heading (PR #11)
+
 1.08 Sat Jan 18 2020 Todd Rinaldo
     Switch testing to github actions
 	update MANIFEST and .gitignorew
