@@ -14,7 +14,7 @@ WriteMakefile(
     },
     ( $ExtUtils::MakeMaker::VERSION >= 6.3002 ? ( 'LICENSE' => 'perl', ) : () ),
     'DISTNAME' => 'Tie-DBI',
-    'MIN_PERL_VERSION' => 5.006,
+    'MIN_PERL_VERSION' => 5.008,
     'dist'     => {
         'COMPRESS' => 'gzip -9f',     'SUFFIX'   => 'gz',
         'ZIP'      => '/usr/bin/zip', 'ZIPFLAGS' => '-rl'

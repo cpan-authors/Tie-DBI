@@ -2,16 +2,13 @@ package Tie::DBI;
 
 use strict;
 use warnings;
-use 5.006;
+use 5.008;
 use Carp;
 use DBI;
 our $VERSION = '1.09';
 
 BEGIN {
-    eval {
-        require Encode::compat if $] < 5.007001;
-        require Encode;
-    };
+    eval { require Encode; };
 }
 
 # Default options for the module
@@ -687,7 +684,7 @@ sub EXISTS {
 
 sub DESTROY {
     my $s = shift;
-    warn "$s->{table}:$s->{value} has been destroyed" if $s->{'table'}->{DEBUG};
+    warn "$s->{table}:$s->{record} has been destroyed" if $s->{'table'}->{DEBUG};
 }
 
 =head1 NAME

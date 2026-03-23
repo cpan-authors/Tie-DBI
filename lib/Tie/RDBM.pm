@@ -2,7 +2,7 @@ package Tie::RDBM;
 
 use strict;
 use warnings;
-use 5.006;
+use 5.008;
 use Carp;
 use DBI;
 our $VERSION = '0.74';
