@@ -26,7 +26,7 @@ unless ($DRIVER) {
 }
 
 if ($DRIVER) {
-    plan tests => 28;
+    plan tests => 31;
     diag("DBI.t - Using DBD driver $DRIVER...");
 }
 else {
@@ -190,6 +190,48 @@ $before                         = TEST_STRING_WITH_QUESTION_MARK;
 $h{strawberries}->{description} = $before;
 $after                          = $h{strawberries}->{description};
 is( $after, $before, 'question marks can appear in text fields' );
+
+# Test Record CLEAR: clearing a record should null all non-key fields
+# but preserve the key column. Bug: CLEAR used the record's key VALUE
+# (e.g. 'strawberries') instead of the key COLUMN NAME (e.g. 'produce_id')
+# when excluding the key field, so the key column was incorrectly included
+# in the update and the exclusion was a no-op.
+SKIP: {
+    skip "Skipping CLEAR test for CSV driver...", 2 if ( $DRIVER eq 'CSV' );
+
+    # Set known values first
+    $h{eggs}->{price}       = 1.00;
+    $h{eggs}->{quantity}    = 12;
+    $h{eggs}->{description} = 'Farm-fresh Atlantic eggs';
+
+    # CLEAR the record — should null all non-key fields
+    my $record = $h{eggs};
+    %$record = ();
+
+    # The key should still exist in the table
+    ok( exists $h{eggs}, 'Record still exists after CLEAR' );
+
+    # Non-key fields should be undef/null
+    ok( !defined $h{eggs}->{quantity}, 'Non-key field is null after Record CLEAR' );
+}
+
+# Record CLEAR should not attempt to set the key field at all.
+# Bug: CLEAR built a hash with ALL fields (including key) set to undef, then
+# relied on STORE to silently skip it.  With WARN enabled, this produced a
+# spurious "Ignored attempt to change value of key field" warning.
+SKIP: {
+    skip "Skipping CLEAR-warn test for CSV driver...", 1 if ( $DRIVER eq 'CSV' );
+
+    my %warn_hash;
+    tie( %warn_hash, 'Tie::DBI', { db => $dbh, table => 'testTie', key => 'produce_id', CLOBBER => 3, WARN => 1 } );
+    my $record = $warn_hash{eggs};
+    my @warnings;
+    local $SIG{__WARN__} = sub { push @warnings, $_[0] };
+    %$record = ();
+    my @key_warnings = grep { /key field/ } @warnings;
+    is( scalar @key_warnings, 0, 'Record CLEAR does not warn about key field' );
+    untie %warn_hash;
+}
 
 # Test that DESTROY disconnects when Tie::DBI owns the connection.
 # The SEGV-fix loop in DESTROY must not delete the dbh before
