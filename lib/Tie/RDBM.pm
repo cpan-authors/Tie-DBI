@@ -218,10 +218,9 @@ END
 
 sub CLEAR {
     my $self = shift;
-    my $dbh  = $self->{'dbh'};
     my $sth  = $self->_prepare( 'clear', "delete from $self->{table}" );
-    $sth->execute();
-    croak "Database delete all statement failed: $DBI::errstr" if $dbh->err;
+    $sth->execute()
+      || croak "CLEAR: delete statement failed: $DBI::errstr";
     $sth->finish;
 }
 
