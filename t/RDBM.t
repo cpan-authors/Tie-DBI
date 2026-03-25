@@ -21,7 +21,7 @@ unless ($DRIVER) {
 }
 
 if ($DRIVER) {
-    plan tests => 22;
+    plan tests => 23;
     diag("RDBM.t - Using DBD driver $DRIVER...");
 }
 else {
@@ -92,6 +92,18 @@ tie( %ext, 'Tie::RDBM', $ext_dbh, { table => 'PData' } );
 untie %ext;
 ok( $ext_dbh->ping, 'external dbh still alive after untie' );
 eval { $ext_dbh->disconnect };
+
+# Test that DESTROY disconnects when Tie::RDBM owns the connection.
+# The DESTROY cleanup must not delete the dbh before the disconnect call,
+# or connections created via DSN will leak.
+{
+    my %dsn_hash;
+    tie( %dsn_hash, 'Tie::RDBM', $dsn, { table => 'PData', user => USER, password => PASS } );
+    my $internal_dbh = tied(%dsn_hash)->{'dbh'};
+    untie %dsn_hash;
+    ok( !$internal_dbh->ping, 'DSN-created dbh is disconnected after untie' );
+    undef $internal_dbh;
+}
 
 # Explicit cleanup to avoid SEGV during global destruction (GH #7).
 # All DBI objects must be freed before global destruction begins.

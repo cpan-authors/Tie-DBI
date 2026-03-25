@@ -282,10 +282,21 @@ sub NEXTKEY {
 
 sub DESTROY {
     my $self = shift;
+    return unless $self->{'dbh'};
+
+    # Explicitly finish and remove all cached statement handles before
+    # the hash is torn down.  During global destruction, values are freed
+    # in undefined order.  If the dbh is freed before a cached sth, the
+    # sth DESTROY calls sqlite3_finalize (or equivalent) on a stale
+    # handle, causing SEGV.  Mirrors the fix in Tie::DBI::DESTROY.
+    # See: https://github.com/cpan-authors/Tie-DBI/issues/7
     foreach (qw/fetch update insert delete clear exists fetchkeys/) {
-        $self->{$_}->finish if $self->{$_};
+        next unless $self->{$_};
+        eval { $self->{$_}->finish };
+        delete $self->{$_};
     }
-    $self->{'dbh'}->disconnect() if $self->{'dbh'} && $self->{needs_disconnect};
+    eval { $self->{'dbh'}->disconnect() } if $self->{needs_disconnect};
+    delete $self->{'dbh'};
 }
 
 sub commit {
