@@ -662,7 +662,7 @@ sub CLEAR {
     croak "CLEAR: read-only database"
       unless $s->{'table'}->{CLOBBER} > 1;
     my %h = map { $_ => undef } keys %{ $s->{'table'}->_fields() };
-    delete $h{ $s->{'record'} };    # can't remove key field
+    delete $h{ $s->{'table'}->{key} };    # can't remove key field
     $s->{'table'}->STORE( $s->{'record'}, \%h );
 }
 
