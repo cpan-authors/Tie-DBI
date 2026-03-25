@@ -254,7 +254,14 @@ END2
 
     $sth->execute() || croak "Can't execute select statement: $DBI::errstr";
     my $ref = $sth->fetch();
-    return defined($ref) ? $ref->[0] : undef;
+    return undef unless defined($ref);
+
+    # Cache the value so that FETCH can reuse it, just like NEXTKEY does.
+    # Without this, the first iteration of each() triggers a redundant
+    # SQL query because FETCH finds no cached_value entry for this key.
+    my ( $key, $value ) = ( $ref->[0], $ref->[2] ? thaw( $ref->[1] ) : $ref->[1] );
+    $self->{'cached_value'}->{$key} = $value;
+    return $key;
 }
 
 sub NEXTKEY {

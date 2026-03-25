@@ -21,7 +21,7 @@ unless ($DRIVER) {
 }
 
 if ($DRIVER) {
-    plan tests => 21;
+    plan tests => 22;
     diag("RDBM.t - Using DBD driver $DRIVER...");
 }
 else {
@@ -62,6 +62,18 @@ SKIP: {
 is( join( " ", sort keys %h ), "fred ricky" );
 is( $h{'george'} = 42, 42 );
 is( join( " ", sort keys %h ), "fred george ricky" );
+
+# Test that each() returns correct values via FIRSTKEY/NEXTKEY caching.
+# Without FIRSTKEY caching, the first value would still be fetched
+# correctly (via FETCH fallback), but at the cost of an extra SQL query.
+{
+    my %got;
+    while ( my ( $k, $v ) = each %h ) {
+        $got{$k} = $v;
+    }
+    is( $got{'george'}, 42, 'each() returns correct values for all keys' );
+}
+
 untie %h;
 
 my %i;
