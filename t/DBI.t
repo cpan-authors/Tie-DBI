@@ -26,7 +26,7 @@ unless ($DRIVER) {
 }
 
 if ($DRIVER) {
-    plan tests => 36;
+    plan tests => 47;
     diag("DBI.t - Using DBD driver $DRIVER...");
 }
 else {
@@ -280,6 +280,73 @@ SKIP: {
     ok( !exists $nobindsel{kiwis}, 'DELETE works with CanBindSelect=0' );
 
     untie %nobindsel;
+}
+
+# Test fields() method — returns the column names of the tied table
+{
+    my @f = sort tied(%h)->fields;
+    is( scalar @f, 4, 'fields() returns correct number of columns' );
+    is( join(' ', @f), 'description price produce_id quantity',
+        'fields() returns all column names' );
+}
+
+# Test dbh() method — returns the underlying database handle
+{
+    my $handle = tied(%h)->dbh;
+    isa_ok( $handle, 'DBI::db', 'dbh() returns a DBI handle' );
+    ok( $handle->ping, 'dbh() handle is alive' );
+}
+
+# Test error() and errstr() — baseline check when no error present
+{
+    # After successful operations, error() should be falsy
+    my $err = tied(%h)->error;
+    ok( !$err, 'error() returns false after successful operations' );
+}
+
+# Test commit/rollback with autocommit disabled.
+# SQLite supports transactions, so this exercises the real code path.
+SKIP: {
+    skip "Transaction tests require SQLite", 6 unless $DRIVER eq 'SQLite';
+
+    my $dsn;
+    if ( $ENV{DBI_DSN} ) { $dsn = $ENV{DBI_DSN}; }
+    else                 { $dsn = "dbi:$DRIVER:${\DBNAME}:${\HOST}"; }
+
+    # Open with autocommit off
+    my %txn;
+    tie( %txn, 'Tie::DBI', $dsn, 'testTie', 'produce_id',
+        { CLOBBER => 3, WARN => 0, AUTOCOMMIT => 0,
+          user => USER, password => PASS } );
+    ok( tied(%txn), 'tied with AUTOCOMMIT=0' );
+
+    # Store a value, then rollback — it should vanish
+    $txn{mangoes} = { price => 3.00, quantity => 5, description => 'Tropical mangoes' };
+    is( $txn{mangoes}{quantity}, 5, 'value visible before rollback' );
+    tied(%txn)->rollback;
+    ok( !exists $txn{mangoes}, 'value gone after rollback' );
+
+    # Store a value, then commit — it should persist across retie
+    $txn{mangoes} = { price => 3.00, quantity => 5, description => 'Tropical mangoes' };
+    tied(%txn)->commit;
+
+    # Untie and retie to confirm persistence
+    untie %txn;
+    my %txn2;
+    tie( %txn2, 'Tie::DBI', $dsn, 'testTie', 'produce_id',
+        { CLOBBER => 0, WARN => 0, AUTOCOMMIT => 1,
+          user => USER, password => PASS } );
+    ok( exists $txn2{mangoes}, 'committed value persists after retie' );
+    is( $txn2{mangoes}{quantity}, 5, 'committed value has correct data' );
+
+    # Clean up: delete the test row
+    untie %txn2;
+    my %cleanup;
+    tie( %cleanup, 'Tie::DBI', $dsn, 'testTie', 'produce_id',
+        { CLOBBER => 3, WARN => 0, user => USER, password => PASS } );
+    delete $cleanup{mangoes};
+    untie %cleanup;
+    ok( 1, 'transaction test cleanup complete' );
 }
 
 # Explicit cleanup to avoid SEGV during global destruction (GH #7).
