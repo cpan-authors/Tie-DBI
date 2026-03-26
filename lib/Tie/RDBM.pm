@@ -216,6 +216,17 @@ END
     1;
 }
 
+sub SCALAR {
+    my $self = shift;
+    my $sth  = $self->{'dbh'}->prepare("SELECT COUNT(*) FROM $self->{table}")
+      || croak "SCALAR: $DBI::errstr";
+    $sth->execute()
+      || croak "SCALAR: $DBI::errstr";
+    my ($count) = $sth->fetchrow_array;
+    $sth->finish;
+    return $count;
+}
+
 sub CLEAR {
     my $self = shift;
     my $dbh  = $self->{'dbh'};
