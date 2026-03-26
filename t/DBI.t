@@ -291,7 +291,8 @@ SKIP: {
     skip "Skipping CASESENSITIV test for CSV driver...", 5 if ( $DRIVER eq 'CSV' );
 
     # Default CASESENSITIV=0, so field lookups should be case-insensitive
-    my $record = $h{eggs};
+    # Use strawberries (quantity=42 from earlier test, known good value)
+    my $record = $h{strawberries};
 
     # Fetch with different case should work
     my $qty = $record->{Quantity};
@@ -314,7 +315,8 @@ SKIP: {
     is( $h{eggs}->{price}, 2.50, 'CASESENSITIV=0: mixed-case STORE persists value' );
 
     # Record::EXISTS with mixed case should return true
-    ok( exists $record->{Description}, 'CASESENSITIV=0: EXISTS with mixed case returns true' );
+    my $strawberry_record = $h{strawberries};
+    ok( exists $strawberry_record->{Description}, 'CASESENSITIV=0: EXISTS with mixed case returns true' );
 }
 
 # Explicit cleanup to avoid SEGV during global destruction (GH #7).
