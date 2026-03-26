@@ -26,7 +26,7 @@ unless ($DRIVER) {
 }
 
 if ($DRIVER) {
-    plan tests => 31;
+    plan tests => 34;
     diag("DBI.t - Using DBD driver $DRIVER...");
 }
 else {
@@ -125,10 +125,17 @@ isa_ok( tie( %h, 'Tie::DBI', { db => $dbh, table => 'testTie', key => 'produce_i
 %h = () unless $DRIVER eq 'ExampleP';
 is( scalar( keys %h ), 0, '%h is empty' );
 
+# Test SCALAR on empty table: scalar %h should return 0 (falsy)
+is( scalar %h, 0, 'scalar %h returns 0 for empty table' );
+
 {
     local $^W = 0;
     ok( insert_data( \%h ), "Insert data into db" );
 }
+
+# Test SCALAR on non-empty table: scalar %h should return the row count
+is( scalar %h, 5, 'scalar %h returns row count' );
+ok( %h, 'non-empty table is truthy in boolean context' );
 ok( exists( $h{strawberries} ) );
 ok( defined( $h{strawberries} ) );
 is( join( " ", map { chopBlanks($_) } sort keys %h ), "apricots bananas eggs kiwis strawberries" );

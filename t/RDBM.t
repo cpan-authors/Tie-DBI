@@ -21,7 +21,7 @@ unless ($DRIVER) {
 }
 
 if ($DRIVER) {
-    plan tests => 22;
+    plan tests => 25;
     diag("RDBM.t - Using DBD driver $DRIVER...");
 }
 else {
@@ -36,6 +36,9 @@ my %h;
 isa_ok( tie( %h, 'Tie::RDBM', $dsn, { create => 1, drop => 1, table => 'PData', 'warn' => 0, user => USER, password => PASS } ), 'Tie::RDBM' );
 %h = ();
 is( scalar( keys %h ), 0 );
+
+# Test SCALAR on empty table
+is( scalar %h, 0, 'scalar %h returns 0 for empty table' );
 
 is( $h{'fred'} = 'ethel', 'ethel' );
 is( $h{'fred'}, 'ethel' );
@@ -62,6 +65,10 @@ SKIP: {
 is( join( " ", sort keys %h ), "fred ricky" );
 is( $h{'george'} = 42, 42 );
 is( join( " ", sort keys %h ), "fred george ricky" );
+
+# Test SCALAR on non-empty table
+is( scalar %h, 3, 'scalar %h returns row count' );
+ok( %h, 'non-empty table is truthy in boolean context' );
 
 # Test that each() returns correct values via FIRSTKEY/NEXTKEY caching.
 # Without FIRSTKEY caching, the first value would still be fetched
