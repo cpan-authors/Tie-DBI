@@ -26,7 +26,7 @@ unless ($DRIVER) {
 }
 
 if ($DRIVER) {
-    plan tests => 31;
+    plan tests => 36;
     diag("DBI.t - Using DBD driver $DRIVER...");
 }
 else {
@@ -249,6 +249,37 @@ SKIP: {
     untie %dsn_hash;
     ok( !$internal_dbh->ping, 'DSN-created dbh is disconnected after untie' );
     undef $internal_dbh;
+}
+
+# Test that operations work when CanBindSelect is disabled (Oracle code path).
+# Oracle has CanBind=1 but CanBindSelect=0, meaning _run_query falls through
+# to manual placeholder substitution for WHERE queries.  A bug caused callers
+# to pre-quote values (checking CanBindSelect) while _run_query re-quoted them
+# (checking CanBind), producing double-quoted SQL that always failed.
+{
+    my %nobindsel;
+    tie( %nobindsel, 'Tie::DBI', { db => $dbh, table => 'testTie', key => 'produce_id', CLOBBER => 3, WARN => 0 } );
+    my $tied_obj = tied(%nobindsel);
+    # Simulate Oracle: CanBind=1 (already true for SQLite), CanBindSelect=0
+    $tied_obj->{CanBindSelect} = 0;
+
+    # FETCH should still find existing records
+    ok( defined $nobindsel{bananas}, 'FETCH works with CanBindSelect=0' );
+    is( $nobindsel{bananas}->{quantity}, 28, 'Record field access works with CanBindSelect=0' );
+
+    # EXISTS should still find existing records
+    ok( exists $nobindsel{bananas}, 'EXISTS works with CanBindSelect=0' );
+
+    # STORE/update should work
+    $nobindsel{bananas} = { quantity => 99 };
+    is( $nobindsel{bananas}->{quantity}, 99, 'STORE update works with CanBindSelect=0' );
+
+    # DELETE should work
+    $nobindsel{kiwis} = { price => 1.50, quantity => 9, description => 'Juicy kiwis' };
+    delete $nobindsel{kiwis};
+    ok( !exists $nobindsel{kiwis}, 'DELETE works with CanBindSelect=0' );
+
+    untie %nobindsel;
 }
 
 # Explicit cleanup to avoid SEGV during global destruction (GH #7).
