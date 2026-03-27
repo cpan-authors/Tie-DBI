@@ -259,7 +259,7 @@ sub EXISTS {
     my ( $s, $key ) = @_;
     $key = $s->_quote( $s->{key}, $key ) unless $s->{CanBind};
     my $st = $s->_run_query( 'fetch1', "SELECT $s->{key} FROM $s->{table} WHERE $s->{key} = ?", $key );
-    croak $DBI::errstr unless $st;
+    croak "EXISTS: ", $DBI::errstr unless $st;
     $st->fetch;
     my $rows = $st->rows;
     $st->finish;
@@ -605,6 +605,7 @@ sub _prepare {
         return undef unless $q;
         warn $q, "\n" if $self->{DEBUG};
         my $sth = $self->{'dbh'}->prepare($q);
+        croak qq/Problems preparing statement "$q": $DBI::errstr/ unless $sth;
         $self->{$tag} = $sth;
     }
     else {
