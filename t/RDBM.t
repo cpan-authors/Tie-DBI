@@ -21,7 +21,7 @@ unless ($DRIVER) {
 }
 
 if ($DRIVER) {
-    plan tests => 23;
+    plan tests => 29;
     diag("RDBM.t - Using DBD driver $DRIVER...");
 }
 else {
@@ -103,6 +103,42 @@ eval { $ext_dbh->disconnect };
     untie %dsn_hash;
     ok( !$internal_dbh->ping, 'DSN-created dbh is disconnected after untie' );
     undef $internal_dbh;
+}
+
+# Test commit/rollback with autocommit disabled.
+SKIP: {
+    skip "Transaction tests require SQLite", 6 unless $DRIVER eq 'SQLite';
+
+    my %txn;
+    tie( %txn, 'Tie::RDBM', $dsn,
+        { table => 'PData', autocommit => 0, user => USER, password => PASS } );
+    ok( tied(%txn), 'tied with autocommit=0' );
+
+    # Store a value, then rollback — it should vanish
+    $txn{'rollback_test'} = 'should disappear';
+    is( $txn{'rollback_test'}, 'should disappear', 'value visible before rollback' );
+    tied(%txn)->rollback;
+    ok( !exists $txn{'rollback_test'}, 'value gone after rollback' );
+
+    # Store a value, then commit — it should persist across retie
+    $txn{'commit_test'} = 'should persist';
+    tied(%txn)->commit;
+    untie %txn;
+
+    my %txn2;
+    tie( %txn2, 'Tie::RDBM', $dsn,
+        { table => 'PData', user => USER, password => PASS } );
+    ok( exists $txn2{'commit_test'}, 'committed value persists after retie' );
+    is( $txn2{'commit_test'}, 'should persist', 'committed value has correct data' );
+    untie %txn2;
+
+    # Clean up
+    my %cleanup;
+    tie( %cleanup, 'Tie::RDBM', $dsn,
+        { table => 'PData', user => USER, password => PASS } );
+    delete $cleanup{'commit_test'};
+    untie %cleanup;
+    ok( 1, 'transaction test cleanup complete' );
 }
 
 # Explicit cleanup to avoid SEGV during global destruction (GH #7).
