@@ -26,7 +26,7 @@ unless ($DRIVER) {
 }
 
 if ($DRIVER) {
-    plan tests => 36;
+    plan tests => 41;
     diag("DBI.t - Using DBD driver $DRIVER...");
 }
 else {
@@ -280,6 +280,43 @@ SKIP: {
     ok( !exists $nobindsel{kiwis}, 'DELETE works with CanBindSelect=0' );
 
     untie %nobindsel;
+}
+
+# Test CASESENSITIV=0 (default): field name lookups should be case-insensitive.
+# Bug: _fields() lowercases stored column names but _fetch_field(), STORE(),
+# and Record::EXISTS() never lowercase the user-provided field names, so
+# mixed-case access like $record->{Price} fails to match 'price' in the
+# validation hash.
+SKIP: {
+    skip "Skipping CASESENSITIV test for CSV driver...", 5 if ( $DRIVER eq 'CSV' );
+
+    # Default CASESENSITIV=0, so field lookups should be case-insensitive
+    # Use strawberries (quantity=42 from earlier test, known good value)
+    my $record = $h{strawberries};
+
+    # Fetch with different case should work
+    my $qty = $record->{Quantity};
+    ok( defined $qty, 'CASESENSITIV=0: fetch with mixed case returns value' );
+    is( $qty, $record->{quantity}, 'CASESENSITIV=0: mixed case returns same value as lowercase' );
+
+    # STORE with mixed case should work (not warn about unknown field)
+    my @warnings;
+    {
+        my %warn_hash;
+        tie( %warn_hash, 'Tie::DBI', { db => $dbh, table => 'testTie', key => 'produce_id', CLOBBER => 3, WARN => 1 } );
+        local $SIG{__WARN__} = sub { push @warnings, $_[0] };
+        $warn_hash{eggs} = { Price => 2.50 };
+        untie %warn_hash;
+    }
+    my @unknown_warnings = grep { /unknown field/ } @warnings;
+    is( scalar @unknown_warnings, 0, 'CASESENSITIV=0: STORE with mixed-case field does not warn' );
+
+    # Verify the STORE actually persisted the value
+    is( $h{eggs}->{price}, 2.50, 'CASESENSITIV=0: mixed-case STORE persists value' );
+
+    # Record::EXISTS with mixed case should return true
+    my $strawberry_record = $h{strawberries};
+    ok( exists $strawberry_record->{Description}, 'CASESENSITIV=0: EXISTS with mixed case returns true' );
 }
 
 # Explicit cleanup to avoid SEGV during global destruction (GH #7).

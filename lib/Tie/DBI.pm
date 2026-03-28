@@ -301,21 +301,23 @@ sub STORE {
     croak "STORE: read-only database"
       unless $s->{CLOBBER} > 0;
 
-    my (@fields);
+    my ( @fields, @values );
     my $ok = $s->_fields();
     foreach ( sort keys %$value ) {
-        if ( $_ eq $s->{key} ) {
+        # Normalize field name for validation when CASESENSITIV is off
+        my $field = $s->{CASESENSITIV} ? $_ : lc $_;
+        if ( $field eq $s->{key} ) {
             carp qq/Ignored attempt to change value of key field "$s->{key}"/ if $s->{WARN};
             next;
         }
-        if ( !$ok->{$_} ) {
+        if ( !$ok->{$field} ) {
             carp qq/Ignored attempt to set unknown field "$_"/ if $s->{WARN};
             next;
         }
-        push( @fields, $_ );
+        push( @fields, $field );
+        push( @values, $value->{$_} );    # use original key for value lookup
     }
     return undef unless @fields;
-    my (@values) = map { $value->{$_} } @fields;
 
     # Attempt an insert.  If that fails (usually because the key already exists),
     # perform an update. For this to work correctly, the key field MUST be marked unique
@@ -491,7 +493,10 @@ sub _fetch_field {
     my ( $s, $key, $fields ) = @_;
     $key = $s->_quote( $s->{key}, $key ) unless $s->{CanBind};
     my $valid = $s->_fields();
-    my @valid_fields = grep( $valid->{$_}, @$fields );
+    # Normalize field names to lowercase when CASESENSITIV is off,
+    # matching the normalization done in _fields().
+    my @lookup = $s->{CASESENSITIV} ? @$fields : map { lc } @$fields;
+    my @valid_fields = grep( $valid->{$_}, @lookup );
     return undef unless @valid_fields;
 
     my $f = join( ',', @valid_fields );
@@ -500,11 +505,11 @@ sub _fetch_field {
 
     my ( @r, @results );
     while ( @r = $st->fetchrow_array ) {
-        my @i = map { $valid->{$_} ? shift @r : undef } @$fields;
+        my @i = map { $valid->{$_} ? shift @r : undef } @lookup;
         if ( $s->{ENCODING} ) {
             @i = map { _decode( $s->{ENCODING}, $_ ) } @i;
         }
-        push( @results, ( @$fields == 1 ) ? $i[0] : [@i] );
+        push( @results, ( @lookup == 1 ) ? $i[0] : [@i] );
     }
 
     $st->finish;
@@ -680,7 +685,8 @@ sub NEXTKEY {
 
 sub EXISTS {
     my $s = shift;
-    return $s->{'table'}->_fields()->{ $_[0] };
+    my $field = $s->{'table'}->{CASESENSITIV} ? $_[0] : lc $_[0];
+    return $s->{'table'}->_fields()->{ $field };
 }
 
 sub DESTROY {
