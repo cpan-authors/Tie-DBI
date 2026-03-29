@@ -513,14 +513,12 @@ sub _fetch_field {
 
 sub _insert {
     my ( $s, $key, $fields, $values ) = @_;
-    push( @$fields, $s->{key} );
-    push( @$values, $key );
-    my @values = $s->_quote_many( $fields, $values );
-    my (@Qs) = ('?') x @$values;
+    my @ins_fields = ( @$fields, $s->{key} );
+    my @ins_values = ( @$values, $key );
+    my @values = $s->_quote_many( \@ins_fields, \@ins_values );
+    my (@Qs) = ('?') x @ins_values;
     local ($") = ',';
-    my $st = $s->_run_query( "insert@$fields", "insert into $s->{table} (@$fields) values (@Qs)", @values );
-    pop(@$fields);
-    pop(@$values);
+    my $st = $s->_run_query( "insert@ins_fields", "insert into $s->{table} (@ins_fields) values (@Qs)", @values );
     return $st ? $st->rows : 0;
 }
 
