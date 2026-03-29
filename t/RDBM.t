@@ -21,7 +21,7 @@ unless ($DRIVER) {
 }
 
 if ($DRIVER) {
-    plan tests => 23;
+    plan tests => 27;
     diag("RDBM.t - Using DBD driver $DRIVER...");
 }
 else {
@@ -81,6 +81,21 @@ isa_ok( tie( %i, 'Tie::RDBM', $dsn, { table => 'PData', user => USER, password =
 is( $i{'george'}, 42 );
 is( join( " ", sort keys %i ), "fred george ricky" );
 untie %i;
+
+# Test that cached_value doesn't accumulate entries during each() loop.
+# Without the fix, FETCH reads from cached_value but never deletes the entry,
+# so every row visited by each() stays in memory for the entire iteration.
+{
+    my %m;
+    isa_ok( tie( %m, 'Tie::RDBM', $dsn, { table => 'PData', user => USER, password => PASS } ), 'Tie::RDBM' );
+    my $tied = tied(%m);
+    while ( my ( $k, $v ) = each %m ) {
+        # After FETCH consumes the cached value, the entry should be gone
+        ok( !exists $tied->{'cached_value'}->{$k},
+            "cached_value entry for '$k' removed after FETCH" );
+    }
+    untie %m;
+}
 
 # Test that passing an external dbh doesn't disconnect it on untie.
 # Before the needs_disconnect fix, Tie::RDBM would unconditionally
