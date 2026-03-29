@@ -169,8 +169,10 @@ sub FETCH {
     my ( $self, $key ) = @_;
 
     # this is a hack to avoid doing an unnecessary SQL select
-    # during an each() loop.
-    return $self->{'cached_value'}->{$key}
+    # during an each() loop.  Use delete so the entry doesn't
+    # accumulate — without this, every row visited by each()
+    # stays in memory for the entire iteration.
+    return delete $self->{'cached_value'}->{$key}
       if exists $self->{'cached_value'}->{$key};
 
     # create statement handler if it doesn't already exist.
