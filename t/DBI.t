@@ -26,7 +26,7 @@ unless ($DRIVER) {
 }
 
 if ($DRIVER) {
-    plan tests => 36;
+    plan tests => 42;
     diag("DBI.t - Using DBD driver $DRIVER...");
 }
 else {
@@ -280,6 +280,54 @@ SKIP: {
     ok( !exists $nobindsel{kiwis}, 'DELETE works with CanBindSelect=0' );
 
     untie %nobindsel;
+}
+
+# Test ENCODING option: values should be decoded on fetch, keys should be
+# decoded during iteration.  Bug: FIRSTKEY/NEXTKEY returned raw bytes from
+# the database without applying _decode(), while _fetch_field did decode.
+SKIP: {
+    skip "Encode module not available", 6 unless eval { require Encode; 1 };
+
+    my %enc_hash;
+    tie( %enc_hash, 'Tie::DBI', {
+        db => $dbh, table => 'testTie', key => 'produce_id',
+        CLOBBER => 3, WARN => 0, ENCODING => 'UTF-8'
+    });
+
+    # Insert a record with a non-ASCII UTF-8 value
+    my $utf8_desc = "Caf\x{e9} au lait";
+    $enc_hash{'coffee'} = { description => $utf8_desc, price => 3.50, quantity => 1 };
+
+    # Fetched value should be decoded (UTF-8 flag set)
+    my $fetched = $enc_hash{'coffee'}->{description};
+    ok( utf8::is_utf8($fetched), 'ENCODING: fetched value has UTF-8 flag' );
+    is( $fetched, $utf8_desc, 'ENCODING: fetched value matches original' );
+
+    # Insert a record with a non-ASCII UTF-8 key
+    my $utf8_key = "na\x{ef}ve";
+    $enc_hash{$utf8_key} = { description => 'Test item', price => 1.00, quantity => 1 };
+
+    # keys() iterates via FIRSTKEY/NEXTKEY — keys should be decoded
+    my @all_keys = keys %enc_hash;
+    my @matching = grep { $_ eq $utf8_key } @all_keys;
+    is( scalar @matching, 1, 'ENCODING: UTF-8 key found in keys()' );
+    ok( utf8::is_utf8($matching[0]), 'ENCODING: key from keys() has UTF-8 flag' );
+
+    # each() should also return decoded keys
+    my $found_via_each = 0;
+    while ( my ($k, $v) = each %enc_hash ) {
+        if ( $k eq $utf8_key ) {
+            $found_via_each = 1;
+            ok( utf8::is_utf8($k), 'ENCODING: key from each() has UTF-8 flag' );
+            last;
+        }
+    }
+    ok( $found_via_each, 'ENCODING: UTF-8 key found via each()' );
+
+    # Cleanup
+    delete $enc_hash{'coffee'};
+    delete $enc_hash{$utf8_key};
+    untie %enc_hash;
 }
 
 # Explicit cleanup to avoid SEGV during global destruction (GH #7).

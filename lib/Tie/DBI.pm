@@ -233,7 +233,9 @@ sub FIRSTKEY {
         delete $s->{'fetchkeys'};    #freakin' sybase bug
         return undef;
     }
-    return $ref->[0];
+    my $key = $ref->[0];
+    $key = _decode( $s->{ENCODING}, $key ) if $s->{ENCODING};
+    return $key;
 }
 
 sub NEXTKEY {
@@ -251,6 +253,7 @@ sub NEXTKEY {
 
     # Should we do a tie here?
     my ( $key, $value ) = ( $r->[0], {} );
+    $key = _decode( $s->{ENCODING}, $key ) if $s->{ENCODING};
     return wantarray ? ( $key, $value ) : $key;
 }
 
