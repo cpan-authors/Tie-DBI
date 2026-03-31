@@ -21,7 +21,7 @@ unless ($DRIVER) {
 }
 
 if ($DRIVER) {
-    plan tests => 23;
+    plan tests => 26;
     diag("RDBM.t - Using DBD driver $DRIVER...");
 }
 else {
@@ -72,6 +72,49 @@ is( join( " ", sort keys %h ), "fred george ricky" );
         $got{$k} = $v;
     }
     is( $got{'george'}, 42, 'each() returns correct values for all keys' );
+}
+
+# Test that STORE invalidates cached_value during each() iteration.
+# Bug: NEXTKEY caches row values for FETCH, but STORE/DELETE/CLEAR never
+# clear the cache — FETCH returns stale pre-modification data.
+{
+    my %stale;
+    tie( %stale, 'Tie::RDBM', $dsn,
+        { table => 'CacheTest', create => 1, drop => 1, user => USER, password => PASS } );
+    $stale{'aa'} = 'original_aa';
+    $stale{'bb'} = 'original_bb';
+    $stale{'cc'} = 'original_cc';
+
+    my %got_after_store;
+    while ( my ( $k, $v ) = each %stale ) {
+        # Modify the value during iteration
+        $stale{$k} = "modified_$k";
+        # FETCH should return the NEW value, not the stale cached one
+        $got_after_store{$k} = $stale{$k};
+    }
+    is( $got_after_store{'bb'}, 'modified_bb',
+        'FETCH returns new value after STORE during each() iteration' );
+
+    # Test that DELETE invalidates cached_value during iteration.
+    # Start a fresh iteration to populate cache, then delete a key.
+    my $del_key;
+    while ( my ( $k, $v ) = each %stale ) {
+        $del_key = $k;
+        delete $stale{$k};
+        last;
+    }
+    ok( !defined $stale{$del_key},
+        'FETCH returns undef for key deleted during each() iteration' );
+
+    # Test that CLEAR invalidates cached_value.
+    # Re-add data and start iteration to populate cache.
+    $stale{'dd'} = 'val_dd';
+    my ($first_key) = each %stale;
+    %stale = ();
+    ok( !defined $stale{$first_key},
+        'FETCH returns undef after CLEAR during iteration' );
+
+    untie %stale;
 }
 
 untie %h;
