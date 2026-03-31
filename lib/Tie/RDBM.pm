@@ -187,6 +187,10 @@ END
 sub STORE {
     my ( $self, $key, $value ) = @_;
 
+    # Invalidate any cached value for this key so FETCH re-queries the DB.
+    # Without this, FETCH returns stale pre-modification data during each().
+    delete $self->{'cached_value'}->{$key};
+
     my $frozen = 0;
     if ( ref($value) && $self->{'canfreeze'} ) {
         $frozen++;
@@ -208,6 +212,7 @@ sub STORE {
 
 sub DELETE {
     my ( $self, $key ) = @_;
+    delete $self->{'cached_value'}->{$key};
     my $sth = $self->_run_query( 'delete', <<END, $key );
 delete from $self->{table} where $self->{key}=?
 END
@@ -218,7 +223,8 @@ END
 
 sub CLEAR {
     my $self = shift;
-    my $sth  = $self->_prepare( 'clear', "delete from $self->{table}" );
+    delete $self->{'cached_value'};
+    my $sth = $self->_prepare( 'clear', "delete from $self->{table}" );
     $sth->execute()
       || croak "CLEAR: delete statement failed: $DBI::errstr";
     $sth->finish;
