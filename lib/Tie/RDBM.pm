@@ -178,6 +178,7 @@ sub FETCH {
     my $sth = $self->_run_query( 'fetch', <<END, $key );
 select $cols from $self->{table} where $self->{key}=?
 END
+    croak "FETCH: select statement failed: $DBI::errstr" unless $sth;
     my $result = $sth->fetchrow_arrayref();
     $sth->finish;
     return undef unless $result;
@@ -211,7 +212,7 @@ sub DELETE {
     my $sth = $self->_run_query( 'delete', <<END, $key );
 delete from $self->{table} where $self->{key}=?
 END
-    croak "Database delete statement failed: $DBI::errstr" if $sth->err;
+    croak "DELETE: delete statement failed: $DBI::errstr" unless $sth;
     $sth->finish;
     1;
 }
