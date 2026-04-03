@@ -185,6 +185,9 @@ sub FETCH {
         if ( !$s->{CanBind} ) {
             foreach (@keys) { $_ = $s->_quote( $s->{key}, $_ ); }
         }
+        elsif ( $s->{ENCODING} ) {
+            @keys = map { _encode( $s->{ENCODING}, $_ ) } @keys;
+        }
         if ( $s->{DoesIN} ) {
             $query = "SELECT $s->{key} FROM $s->{table} WHERE $s->{key} IN (" . join( ",", ('?') x $count ) . ')';
         }
@@ -194,7 +197,12 @@ sub FETCH {
     }
     else {
         $tag   = "fetch1";
-        @keys  = $s->_quote( $s->{key}, $key ) unless $s->{CanBind};
+        unless ( $s->{CanBind} ) {
+            @keys = $s->_quote( $s->{key}, $key );
+        }
+        elsif ( $s->{ENCODING} ) {
+            @keys = ( _encode( $s->{ENCODING}, $key ) );
+        }
         $query = "SELECT $s->{key} FROM $s->{table} WHERE $s->{key} = ?";
     }
     my $st = $s->_run_query( $tag, $query, @keys ) || croak "FETCH: ", $s->errstr;
@@ -257,7 +265,12 @@ sub NEXTKEY {
 # Unlike fetch, this never goes to the cache
 sub EXISTS {
     my ( $s, $key ) = @_;
-    $key = $s->_quote( $s->{key}, $key ) unless $s->{CanBind};
+    unless ( $s->{CanBind} ) {
+        $key = $s->_quote( $s->{key}, $key );
+    }
+    elsif ( $s->{ENCODING} ) {
+        $key = _encode( $s->{ENCODING}, $key );
+    }
     my $st = $s->_run_query( 'fetch1', "SELECT $s->{key} FROM $s->{table} WHERE $s->{key} = ?", $key );
     croak "EXISTS: ", $DBI::errstr unless $st;
     $st->fetch;
@@ -281,7 +294,12 @@ sub DELETE {
     my ( $s, $key ) = @_;
     croak "DELETE: read-only database"
       unless $s->{CLOBBER} > 1;
-    $key = $s->_quote( $s->{key}, $key ) unless $s->{CanBind};
+    unless ( $s->{CanBind} ) {
+        $key = $s->_quote( $s->{key}, $key );
+    }
+    elsif ( $s->{ENCODING} ) {
+        $key = _encode( $s->{ENCODING}, $key );
+    }
     my $st = $s->_run_query( 'delete', "delete from $s->{table} where $s->{key} = ?", $key )
       || croak "DELETE: delete statement failed, ", $s->errstr;
     $st->finish;
@@ -489,7 +507,12 @@ sub _types {
 
 sub _fetch_field {
     my ( $s, $key, $fields ) = @_;
-    $key = $s->_quote( $s->{key}, $key ) unless $s->{CanBind};
+    unless ( $s->{CanBind} ) {
+        $key = $s->_quote( $s->{key}, $key );
+    }
+    elsif ( $s->{ENCODING} ) {
+        $key = _encode( $s->{ENCODING}, $key );
+    }
     my $valid = $s->_fields();
     my @valid_fields = grep( $valid->{$_}, @$fields );
     return undef unless @valid_fields;
@@ -528,7 +551,12 @@ sub _update {
     my ( $s, $key, $fields, $values ) = @_;
     my (@set) = map { "$_=?" } @$fields;
     my @values = $s->_quote_many( $fields, $values );
-    $key = $s->_quote( $s->{key}, $key ) unless $s->{CanBind};
+    unless ( $s->{CanBind} ) {
+        $key = $s->_quote( $s->{key}, $key );
+    }
+    elsif ( $s->{ENCODING} ) {
+        $key = _encode( $s->{ENCODING}, $key );
+    }
     local ($") = ',';
     my $st = $s->_run_query(
         "update@$fields",
