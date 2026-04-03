@@ -21,7 +21,7 @@ unless ($DRIVER) {
 }
 
 if ($DRIVER) {
-    plan tests => 23;
+    plan tests => 25;
     diag("RDBM.t - Using DBD driver $DRIVER...");
 }
 else {
@@ -103,6 +103,27 @@ eval { $ext_dbh->disconnect };
     untie %dsn_hash;
     ok( !$internal_dbh->ping, 'DSN-created dbh is disconnected after untie' );
     undef $internal_dbh;
+}
+
+# Test that FETCH and DELETE produce clean error messages when _run_query
+# fails, rather than crashing with "Can't call method on an undefined value".
+# Bug: FETCH called $sth->fetchrow_arrayref() and DELETE called $sth->err
+# without checking if _run_query returned undef.
+{
+    my %err_hash;
+    tie( %err_hash, 'Tie::RDBM', $dsn, { table => 'PData', user => USER, password => PASS } );
+
+    # Override _run_query to simulate execute failure (returns undef).
+    no warnings 'redefine';
+    local *Tie::RDBM::_run_query = sub { return undef };
+
+    eval { my $v = $err_hash{'george'} };
+    like( $@, qr/FETCH/, 'FETCH gives clean error on query failure, not raw crash' );
+
+    eval { delete $err_hash{'george'} };
+    like( $@, qr/DELETE|delete/, 'DELETE gives clean error on query failure, not raw crash' );
+
+    untie %err_hash;
 }
 
 # Explicit cleanup to avoid SEGV during global destruction (GH #7).
