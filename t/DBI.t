@@ -26,7 +26,7 @@ unless ($DRIVER) {
 }
 
 if ($DRIVER) {
-    plan tests => 36;
+    plan tests => 40;
     diag("DBI.t - Using DBD driver $DRIVER...");
 }
 else {
@@ -280,6 +280,51 @@ SKIP: {
     ok( !exists $nobindsel{kiwis}, 'DELETE works with CanBindSelect=0' );
 
     untie %nobindsel;
+}
+
+# Test CASESENSITIV=0 key normalization.
+# When CASESENSITIV is off (default), the key column name should be
+# normalized to lowercase so that the key-field guard in STORE works
+# even when the tie() call uses mixed-case key names.
+{
+    my %cs_hash;
+    tie( %cs_hash, 'Tie::DBI', { db => $dbh, table => 'testTie', key => 'Produce_ID', CLOBBER => 3, WARN => 0 } );
+
+    # STORE should work — the key should resolve to the actual column
+    $cs_hash{bananas} = { price => 3.33, quantity => 77 };
+    is( $cs_hash{bananas}->{quantity}, 77, 'STORE works with mixed-case key and CASESENSITIV=0' );
+
+    # The key-field guard should prevent modifying the key column.
+    # With WARN=1, attempting to set the key field should warn, NOT succeed.
+    my %cs_warn;
+    tie( %cs_warn, 'Tie::DBI', { db => $dbh, table => 'testTie', key => 'Produce_ID', CLOBBER => 3, WARN => 1 } );
+    my @warnings;
+    local $SIG{__WARN__} = sub { push @warnings, $_[0] };
+    $cs_warn{bananas} = { produce_id => 'HIJACKED', quantity => 55 };
+    my @key_warnings = grep { /key field/ } @warnings;
+    is( scalar @key_warnings, 1, 'Mixed-case key triggers key-field guard warning' );
+    is( $cs_warn{bananas}->{quantity}, 55, 'Non-key field was updated' );
+
+    untie %cs_warn;
+    untie %cs_hash;
+}
+
+# Record::CLEAR with mixed-case key should not warn about key field.
+# When CASESENSITIV=0 and the key was passed as mixed-case, _fields()
+# returns lowercased names but $self->{key} stays as-is, causing the
+# CLEAR exclusion to miss and include the key in the update.
+SKIP: {
+    skip "Skipping CLEAR-case test for CSV driver...", 1 if ( $DRIVER eq 'CSV' );
+
+    my %cs_clear;
+    tie( %cs_clear, 'Tie::DBI', { db => $dbh, table => 'testTie', key => 'Produce_ID', CLOBBER => 3, WARN => 1 } );
+    my $record = $cs_clear{eggs};
+    my @warnings;
+    local $SIG{__WARN__} = sub { push @warnings, $_[0] };
+    %$record = ();
+    my @key_warnings = grep { /key field/ } @warnings;
+    is( scalar @key_warnings, 0, 'Record CLEAR with mixed-case key does not warn about key field' );
+    untie %cs_clear;
 }
 
 # Explicit cleanup to avoid SEGV during global destruction (GH #7).

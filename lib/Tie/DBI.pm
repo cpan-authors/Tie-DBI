@@ -139,6 +139,12 @@ sub TIEHASH {
 
     # set up more instance variables
     @{$self}{ 'dbh', 'table', 'key', 'driver' } = ( $dbh, $table, $key, $driver );
+
+    # Normalize key column name to lowercase when case-insensitive (the default).
+    # _fields() lowercases stored column names when CASESENSITIV=0, so the key
+    # must match to ensure guards in STORE and Record::CLEAR work correctly.
+    $self->{key} = lc $self->{key} unless $self->{CASESENSITIV};
+
     $self->{BrokenInsert}     = $BROKEN_INSERT{$driver};
     $self->{CanBind}          = $CAN_BIND{$driver};
     $self->{CanBindSelect}    = $self->{CanBind} && $CAN_BINDSELECT{$driver};
