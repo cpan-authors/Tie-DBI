@@ -26,7 +26,7 @@ unless ($DRIVER) {
 }
 
 if ($DRIVER) {
-    plan tests => 36;
+    plan tests => 40;
     diag("DBI.t - Using DBD driver $DRIVER...");
 }
 else {
@@ -280,6 +280,35 @@ SKIP: {
     ok( !exists $nobindsel{kiwis}, 'DELETE works with CanBindSelect=0' );
 
     untie %nobindsel;
+}
+
+# Test ENCODING with key bind variables.
+# When CanBind=1 and ENCODING is set, keys used as bind variables in WHERE
+# clauses must be encoded, just as values are encoded via _quote_many.
+# Without the fix, keys bypass _encode entirely when CanBind is true.
+SKIP: {
+    skip "Encode module not available", 4 unless eval { require Encode; 1 };
+
+    my %enc_hash;
+    tie( %enc_hash, 'Tie::DBI', { db => $dbh, table => 'testTie', key => 'produce_id',
+                                   CLOBBER => 3, WARN => 0, ENCODING => 'UTF-8' } );
+
+    # Insert a record via STORE with ENCODING active
+    $enc_hash{bananas} = { price => 3.50, quantity => 77, description => 'Encoded bananas' };
+
+    # FETCH with ENCODING — key must be encoded for the WHERE bind
+    ok( defined $enc_hash{bananas}, 'FETCH works with ENCODING and CanBind' );
+    is( $enc_hash{bananas}->{quantity}, 77, 'FETCH returns correct value with ENCODING' );
+
+    # EXISTS with ENCODING — key must be encoded for the WHERE bind
+    ok( exists $enc_hash{bananas}, 'EXISTS works with ENCODING and CanBind' );
+
+    # DELETE with ENCODING — key must be encoded for the WHERE bind
+    $enc_hash{kiwis} = { price => 1.50, quantity => 9, description => 'Encoded kiwis' };
+    delete $enc_hash{kiwis};
+    ok( !exists $enc_hash{kiwis}, 'DELETE works with ENCODING and CanBind' );
+
+    untie %enc_hash;
 }
 
 # Explicit cleanup to avoid SEGV during global destruction (GH #7).
