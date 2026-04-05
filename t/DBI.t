@@ -26,7 +26,7 @@ unless ($DRIVER) {
 }
 
 if ($DRIVER) {
-    plan tests => 36;
+    plan tests => 40;
     diag("DBI.t - Using DBD driver $DRIVER...");
 }
 else {
@@ -280,6 +280,29 @@ SKIP: {
     ok( !exists $nobindsel{kiwis}, 'DELETE works with CanBindSelect=0' );
 
     untie %nobindsel;
+}
+
+# Test SCALAR method: boolean context and count.
+# Without SCALAR, `scalar %h` falls back to FIRSTKEY, executing a full
+# SELECT and leaving a cursor open.  SCALAR uses COUNT(*) instead.
+{
+    # Table-level SCALAR: should return the number of records.
+    # After prior test blocks, the table has 4 records:
+    # strawberries, apricots, bananas, eggs (kiwis and cherries were deleted).
+    my $count = scalar %h;
+    is( $count, 4, 'SCALAR returns correct record count' );
+
+    # Boolean context on non-empty hash.
+    ok( %h, 'non-empty tied hash is true in boolean context' );
+
+    # Record-level SCALAR: should return the number of fields.
+    my $record   = $h{eggs};
+    my $nfields  = scalar %$record;
+    my @expected = tied(%h)->fields;
+    is( $nfields, scalar @expected, 'Record SCALAR returns field count' );
+
+    # Boolean context on record.
+    ok( %$record, 'tied record is true in boolean context' );
 }
 
 # Explicit cleanup to avoid SEGV during global destruction (GH #7).
