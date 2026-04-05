@@ -407,8 +407,7 @@ sub _run_query {
             return $sth;
         }
     }
-    local ($^W) = 0;    # kill uninitialized variable warning
-                        # if we get here, then we can't bind, so we replace ? with escaped parameters
+    # if we get here, then we can't bind, so we replace ? with escaped parameters
     my $pos = 0;
     while ( ( $pos = index( $query, '?', $pos ) ) >= 0 ) {
         my $value = shift(@bind_variables);
@@ -430,7 +429,6 @@ sub _fields {
 
         my ( $dbh, $table ) = @{$self}{ 'dbh', 'table' };
 
-        local ($^W) = 0;    # kill uninitialized variable warning
         # NOTE: Do NOT use "my $sth = EXPR unless COND" — that is
         # undefined behavior per perlsyn and leaks the sth handle past
         # scope exit, causing SEGV during global destruction (GH #7).

@@ -279,6 +279,7 @@ SKIP: {
     delete $nobindsel{kiwis};
     ok( !exists $nobindsel{kiwis}, 'DELETE works with CanBindSelect=0' );
 
+    undef $tied_obj;
     untie %nobindsel;
 }
 

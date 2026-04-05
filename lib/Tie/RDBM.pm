@@ -115,14 +115,16 @@ sub TIEHASH {
     my $q            = "select * from $opt->{table} where $opt->{key}=''";
     my $sth          = $dbh->prepare($q);
     my $structure_ok = 0;
-    local ($^W) = 0;    # uninitialized variable problem
-    if ( defined($sth) && $sth->execute() ne '' ) {
+    if ( defined($sth) ) {
+        my $rv = $sth->execute();
+        if ( defined($rv) && $rv ne '' ) {
 
-        # At least the key field exists.  Check whether the others do too.
-        my (%field_names);
-        grep( $field_names{ lc($_) }++, @{ $sth->{NAME} } );
-        $structure_ok++ if $field_names{ $opt->{'value'} };
-        $canfreeze &&= $field_names{ $opt->{'frozen'} };
+            # At least the key field exists.  Check whether the others do too.
+            my (%field_names);
+            grep( $field_names{ lc($_) }++, @{ $sth->{NAME} } );
+            $structure_ok++ if $field_names{ $opt->{'value'} };
+            $canfreeze &&= $field_names{ $opt->{'frozen'} };
+        }
     }
 
     unless ($structure_ok) {
