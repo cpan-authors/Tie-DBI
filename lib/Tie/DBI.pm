@@ -266,6 +266,17 @@ sub EXISTS {
     $rows != 0;
 }
 
+sub SCALAR {
+    my $s   = shift;
+    my $sth = $s->{'dbh'}->prepare("SELECT COUNT(*) FROM $s->{table}")
+      || croak "SCALAR: ", $s->errstr;
+    $sth->execute()
+      || croak "SCALAR: ", $s->errstr;
+    my ($count) = $sth->fetchrow_array;
+    $sth->finish;
+    return $count;
+}
+
 sub CLEAR {
     my $s = shift;
     croak "CLEAR: read-only database"
@@ -681,6 +692,11 @@ sub NEXTKEY {
 sub EXISTS {
     my $s = shift;
     return $s->{'table'}->_fields()->{ $_[0] };
+}
+
+sub SCALAR {
+    my $s = shift;
+    return scalar keys %{ $s->{'table'}->_fields() };
 }
 
 sub DESTROY {
