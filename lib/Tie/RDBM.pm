@@ -540,6 +540,16 @@ with the standard tie() operator:
 
 =over 4
 
+=item scalar %h
+
+    my $count = scalar %h;
+    if (%h) { ... }
+
+Returns the number of records in the table via C<SELECT COUNT(*)>.
+This is much more efficient than the default Perl behavior of calling
+FIRSTKEY, which would run a full C<SELECT> and leave a cursor open.
+Returns 0 (false) for an empty table.
+
 =item commit()
 
    (tied %h)->commit();
