@@ -21,7 +21,7 @@ unless ($DRIVER) {
 }
 
 if ($DRIVER) {
-    plan tests => 23;
+    plan tests => 25;
     diag("RDBM.t - Using DBD driver $DRIVER...");
 }
 else {
@@ -72,6 +72,15 @@ is( join( " ", sort keys %h ), "fred george ricky" );
         $got{$k} = $v;
     }
     is( $got{'george'}, 42, 'each() returns correct values for all keys' );
+}
+
+# Test SCALAR method: boolean context and count.
+# Without SCALAR, `scalar %h` falls back to FIRSTKEY, executing a full
+# SELECT and leaving a cursor open.  SCALAR uses COUNT(*) instead.
+{
+    my $count = scalar %h;
+    is( $count, 3, 'SCALAR returns correct record count' );
+    ok( %h, 'non-empty tied hash is true in boolean context' );
 }
 
 untie %h;

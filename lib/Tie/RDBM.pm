@@ -216,6 +216,17 @@ END
     1;
 }
 
+sub SCALAR {
+    my $self = shift;
+    my $sth  = $self->{'dbh'}->prepare("SELECT COUNT(*) FROM $self->{table}")
+      || croak "SCALAR: $DBI::errstr";
+    $sth->execute()
+      || croak "SCALAR: $DBI::errstr";
+    my ($count) = $sth->fetchrow_array;
+    $sth->finish;
+    return $count;
+}
+
 sub CLEAR {
     my $self = shift;
     my $sth  = $self->_prepare( 'clear', "delete from $self->{table}" );
@@ -528,6 +539,16 @@ methods are available on the underlying object, which you can obtain
 with the standard tie() operator:
 
 =over 4
+
+=item scalar %h
+
+    my $count = scalar %h;
+    if (%h) { ... }
+
+Returns the number of records in the table via C<SELECT COUNT(*)>.
+This is much more efficient than the default Perl behavior of calling
+FIRSTKEY, which would run a full C<SELECT> and leave a cursor open.
+Returns 0 (false) for an empty table.
 
 =item commit()
 

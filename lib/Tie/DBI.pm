@@ -266,6 +266,17 @@ sub EXISTS {
     $rows != 0;
 }
 
+sub SCALAR {
+    my $s   = shift;
+    my $sth = $s->{'dbh'}->prepare("SELECT COUNT(*) FROM $s->{table}")
+      || croak "SCALAR: ", $s->errstr;
+    $sth->execute()
+      || croak "SCALAR: ", $s->errstr;
+    my ($count) = $sth->fetchrow_array;
+    $sth->finish;
+    return $count;
+}
+
 sub CLEAR {
     my $s = shift;
     croak "CLEAR: read-only database"
@@ -683,6 +694,11 @@ sub EXISTS {
     return $s->{'table'}->_fields()->{ $_[0] };
 }
 
+sub SCALAR {
+    my $s = shift;
+    return scalar keys %{ $s->{'table'}->_fields() };
+}
+
 sub DESTROY {
     my $s = shift;
     warn "$s->{table}:$s->{record} has been destroyed" if $s->{'table'}->{DEBUG};
@@ -968,6 +984,29 @@ What you really want is this:
 
      $result = $h{join( $;, 'apricots', 'bananas' )};
          => ARRAY(0x828a8ac)
+
+=head2 Counting and emptiness checks
+
+You can use C<scalar %h> or C<if (%h)> to efficiently check how many
+records are in the table or whether it is non-empty:
+
+    my $count = scalar %produce;
+    print "There are $count items in the produce table";
+        => There are 5 items in the produce table
+
+    if (%produce) {
+        print "produce table is not empty";
+    }
+
+This executes a C<SELECT COUNT(*)> query, which is much more efficient
+than the default Perl behavior of calling FIRSTKEY (which would run a
+full C<SELECT> and leave a cursor open).
+
+When used on a record (the inner tied hash representing a single row),
+C<scalar %record> returns the number of fields in the record:
+
+    my $nfields = scalar %{$produce{eggs}};
+    print "Each record has $nfields fields";
 
 =head2 Updating information
 
