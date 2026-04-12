@@ -1050,7 +1050,7 @@ recover the object.
 
 These are low-level class methods.  Connect() is responsible for
 establishing the connection with the DBI database.  Errstr() and
-error() return $DBI::errstr and $DBI::error respectively.  You may
+error() return $DBI::errstr and $DBI::err respectively.  You
 may override these methods in subclasses if you wish.  For example,
 replace connect() with this code in order to use persistent database
 connections in Apache modules:
