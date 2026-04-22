@@ -26,7 +26,7 @@ unless ($DRIVER) {
 }
 
 if ($DRIVER) {
-    plan tests => 36;
+    plan tests => 48;
     diag("DBI.t - Using DBD driver $DRIVER...");
 }
 else {
@@ -280,6 +280,76 @@ SKIP: {
     ok( !exists $nobindsel{kiwis}, 'DELETE works with CanBindSelect=0' );
 
     untie %nobindsel;
+}
+
+# CLOBBER access control: verify each level restricts the correct operations.
+# CLOBBER=0: read-only (no STORE, no DELETE, no CLEAR)
+# CLOBBER=1: allow STORE only (no DELETE, no CLEAR)
+# CLOBBER=2: allow STORE + DELETE (no CLEAR)
+# CLOBBER=3: full access (already tested above)
+{
+    # CLOBBER=0: all writes should croak
+    my %ro;
+    tie( %ro, 'Tie::DBI', { db => $dbh, table => 'testTie', key => 'produce_id', CLOBBER => 0, WARN => 0 } );
+
+    # Read should work
+    ok( defined $ro{eggs}, 'CLOBBER=0: FETCH works' );
+
+    # STORE should croak
+    eval { $ro{eggs} = { price => 999 } };
+    like( $@, qr/read-only/, 'CLOBBER=0: STORE croaks' );
+
+    # DELETE should croak
+    eval { delete $ro{eggs} };
+    like( $@, qr/read-only/, 'CLOBBER=0: DELETE croaks' );
+
+    # CLEAR should croak
+    eval { %ro = () };
+    like( $@, qr/read-only/, 'CLOBBER=0: CLEAR croaks' );
+
+    untie %ro;
+}
+
+{
+    # CLOBBER=1: allow STORE, forbid DELETE and CLEAR
+    my %rw1;
+    tie( %rw1, 'Tie::DBI', { db => $dbh, table => 'testTie', key => 'produce_id', CLOBBER => 1, WARN => 0 } );
+
+    # STORE should succeed (update existing record)
+    eval { $rw1{eggs} = { price => 1.50 } };
+    is( $@, '', 'CLOBBER=1: STORE succeeds' );
+    is( $rw1{eggs}->{price}, 1.50, 'CLOBBER=1: STORE actually updated' );
+
+    # DELETE should croak
+    eval { delete $rw1{eggs} };
+    like( $@, qr/read-only/, 'CLOBBER=1: DELETE croaks' );
+
+    # CLEAR should croak
+    eval { %rw1 = () };
+    like( $@, qr/read-only/, 'CLOBBER=1: CLEAR croaks' );
+
+    untie %rw1;
+}
+
+{
+    # CLOBBER=2: allow STORE + DELETE, forbid CLEAR
+    my %rw2;
+    tie( %rw2, 'Tie::DBI', { db => $dbh, table => 'testTie', key => 'produce_id', CLOBBER => 2, WARN => 0 } );
+
+    # INSERT a temporary record to delete
+    eval { $rw2{tempfruit} = { price => 0.01, quantity => 1, description => 'Temporary' } };
+    is( $@, '', 'CLOBBER=2: STORE (insert) succeeds' );
+
+    # DELETE should succeed
+    eval { delete $rw2{tempfruit} };
+    is( $@, '', 'CLOBBER=2: DELETE succeeds' );
+    ok( !exists $rw2{tempfruit}, 'CLOBBER=2: DELETE actually removed record' );
+
+    # CLEAR should croak
+    eval { %rw2 = () };
+    like( $@, qr/read-only/, 'CLOBBER=2: CLEAR croaks' );
+
+    untie %rw2;
 }
 
 # Explicit cleanup to avoid SEGV during global destruction (GH #7).
