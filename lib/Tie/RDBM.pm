@@ -594,15 +594,23 @@ use for each of the key, value and frozen fields, and whether the
 database can support binary types.  Since I have access to only a
 limited number of databases, the table is currently short:
 
-   Driver     Key Field      Value Field     Frozen Field  Binary?
+   Driver     Key Field      Value Field       Frozen Field  Binary?
 
-   mysq       varchar(127)   longblob        tinyint       1
-   mSQL       char(255)      char(255)       int           0
-   Sybase     varchar(255)   varbinary(255)  tinyint       1
-   default    varchar(255)   varbinary(255)  tinyint       1
+   mysql      varchar(127)   longblob          tinyint       1
+   mSQL       char(255)      char(255)         int           0
+   Pg         varchar(127)   varchar(2000)     int           0
+   Sybase     varchar(255)   varbinary(255)    tinyint       1
+   Oracle     varchar(255)   varchar2(2000)    integer       1
+   CSV        varchar(255)   varchar(255)      integer       1
+   Informix   nchar(120)     nchar(2000)       integer       0
+   Solid      varchar(255)   varbinary(2000)   integer       1
+   ODBC       varchar(255)   varbinary(2000)   integer       1
+   SQLite     varchar(255)   blob              integer       1
+   default    varchar(255)   varchar(255)      integer       0
 
 The "default" entry is used for any driver not specifically
-mentioned.  
+mentioned.  Note that the default entry does B<not> support binary
+types, so Storable features will be disabled for unlisted drivers.
 
 You are free to add your own entries to this table, or make
 corrections.  Please send me e-mail with any revisions you make so
