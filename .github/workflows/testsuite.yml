@@ -8,6 +8,10 @@ on:
       - "*"
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ubuntu:
     env:
@@ -79,6 +83,7 @@ jobs:
 
     strategy:
       fail-fast: false
+      max-parallel: 8
       matrix:
         perl-version: ${{ fromJson (needs.perl-versions.outputs.perl-versions) }}
 
