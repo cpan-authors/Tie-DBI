@@ -484,6 +484,10 @@ The latest version can be obtained from:
     http://www.genome.wi.mit.edu/~lstein/Tie-DBI/
     
 
+# AI POLICY
+
+This project uses AI-assisted development. See [AI_POLICY.md](AI_POLICY.md) for full details on how AI tools are used and the safeguards in place.
+
 # SEE ALSO
 
 perl(1), DBI(3), Tie::RDBM(3)
