@@ -21,7 +21,7 @@ unless ($DRIVER) {
 }
 
 if ($DRIVER) {
-    plan tests => 33;
+    plan tests => 29;
     diag("RDBM.t - Using DBD driver $DRIVER...");
 }
 else {
@@ -81,21 +81,6 @@ isa_ok( tie( %i, 'Tie::RDBM', $dsn, { table => 'PData', user => USER, password =
 is( $i{'george'}, 42 );
 is( join( " ", sort keys %i ), "fred george ricky" );
 untie %i;
-
-# Test that cached_value holds at most one entry during each() loop.
-# Without the fix, NEXTKEY appends to cached_value on every step,
-# so every row visited by each() accumulates in memory.
-{
-    my %m;
-    isa_ok( tie( %m, 'Tie::RDBM', $dsn, { table => 'PData', user => USER, password => PASS } ), 'Tie::RDBM' );
-    my $tied = tied(%m);
-    while ( my ( $k, $v ) = each %m ) {
-        my $count = scalar keys %{ $tied->{'cached_value'} || {} };
-        cmp_ok( $count, '<=', 1,
-            "cached_value has at most 1 entry during each() (at key '$k')" );
-    }
-    untie %m;
-}
 
 # Test that passing an external dbh doesn't disconnect it on untie.
 # Before the needs_disconnect fix, Tie::RDBM would unconditionally

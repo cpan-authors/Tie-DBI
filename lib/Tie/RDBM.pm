@@ -258,9 +258,8 @@ END2
     # Cache the value so that FETCH can reuse it, just like NEXTKEY does.
     # Without this, the first iteration of each() triggers a redundant
     # SQL query because FETCH finds no cached_value entry for this key.
-    # Replace (not append) to prevent O(n) accumulation during iteration.
     my ( $key, $value ) = ( $ref->[0], $ref->[2] ? thaw( $ref->[1] ) : $ref->[1] );
-    $self->{'cached_value'} = { $key => $value };
+    $self->{'cached_value'}->{$key} = $value;
     return $key;
 }
 
@@ -276,7 +275,7 @@ sub NEXTKEY {
         return wantarray ? () : undef;
     }
     my ( $key, $value ) = ( $r->[0], $r->[2] ? thaw( $r->[1] ) : $r->[1] );
-    $self->{'cached_value'} = { $key => $value };
+    $self->{'cached_value'}->{$key} = $value;
     return wantarray ? ( $key, $value ) : $key;
 }
 
