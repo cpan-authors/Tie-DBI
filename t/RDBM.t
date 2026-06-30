@@ -82,17 +82,17 @@ is( $i{'george'}, 42 );
 is( join( " ", sort keys %i ), "fred george ricky" );
 untie %i;
 
-# Test that cached_value doesn't accumulate entries during each() loop.
-# Without the fix, FETCH reads from cached_value but never deletes the entry,
-# so every row visited by each() stays in memory for the entire iteration.
+# Test that cached_value holds at most one entry during each() loop.
+# Without the fix, NEXTKEY appends to cached_value on every step,
+# so every row visited by each() accumulates in memory.
 {
     my %m;
     isa_ok( tie( %m, 'Tie::RDBM', $dsn, { table => 'PData', user => USER, password => PASS } ), 'Tie::RDBM' );
     my $tied = tied(%m);
     while ( my ( $k, $v ) = each %m ) {
-        # After FETCH consumes the cached value, the entry should be gone
-        ok( !exists $tied->{'cached_value'}->{$k},
-            "cached_value entry for '$k' removed after FETCH" );
+        my $count = scalar keys %{ $tied->{'cached_value'} || {} };
+        cmp_ok( $count, '<=', 1,
+            "cached_value has at most 1 entry during each() (at key '$k')" );
     }
     untie %m;
 }

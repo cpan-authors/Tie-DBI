@@ -169,10 +169,8 @@ sub FETCH {
     my ( $self, $key ) = @_;
 
     # this is a hack to avoid doing an unnecessary SQL select
-    # during an each() loop.  Use delete so the entry doesn't
-    # accumulate — without this, every row visited by each()
-    # stays in memory for the entire iteration.
-    return delete $self->{'cached_value'}->{$key}
+    # during an each() loop.
+    return $self->{'cached_value'}->{$key}
       if exists $self->{'cached_value'}->{$key};
 
     # create statement handler if it doesn't already exist.
@@ -260,8 +258,9 @@ END2
     # Cache the value so that FETCH can reuse it, just like NEXTKEY does.
     # Without this, the first iteration of each() triggers a redundant
     # SQL query because FETCH finds no cached_value entry for this key.
+    # Replace (not append) to prevent O(n) accumulation during iteration.
     my ( $key, $value ) = ( $ref->[0], $ref->[2] ? thaw( $ref->[1] ) : $ref->[1] );
-    $self->{'cached_value'}->{$key} = $value;
+    $self->{'cached_value'} = { $key => $value };
     return $key;
 }
 
@@ -277,7 +276,7 @@ sub NEXTKEY {
         return wantarray ? () : undef;
     }
     my ( $key, $value ) = ( $r->[0], $r->[2] ? thaw( $r->[1] ) : $r->[1] );
-    $self->{'cached_value'}->{$key} = $value;
+    $self->{'cached_value'} = { $key => $value };
     return wantarray ? ( $key, $value ) : $key;
 }
 
