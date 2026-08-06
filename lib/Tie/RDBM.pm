@@ -345,7 +345,7 @@ sub _insert {
             $key, $value
         );
     }
-    ( $sth && $sth->rows ) || croak "Update: $DBI::errstr";
+    ( $sth && $sth->rows ) || croak "Insert: $DBI::errstr";
 }
 
 sub _run_query {
