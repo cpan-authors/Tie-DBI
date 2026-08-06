@@ -563,15 +563,7 @@ sub _quote_many {
     my $types  = $s->_types;
     for ( my $i = 0; $i < @values; $i++ ) {
         next if $noquote->{ $types->{ $fields->[$i] } };
-        if ( $s->{'driver'} eq 'Oracle' && $types->{ $fields->[$i] } eq 'DATE' ) {
-            my $epoch_date = str2time( $values[$i] );
-            my $temp       = time2iso($epoch_date);
-            $temp = $s->{'dbh'}->quote($temp);
-            $values[$i] = $temp;
-        }
-        else {
-            $values[$i] = $s->{'dbh'}->quote( $values[$i] );
-        }
+        $values[$i] = $s->{'dbh'}->quote( $values[$i] );
     }
     return @values;
 }
@@ -583,20 +575,9 @@ sub _quote {
         return $noquote->{ $types->{$field} } ? $value : $s->{'dbh'}->quote($value);
     }
 
-    if ( $s->{'driver'} eq 'Oracle' && $types->{$field} eq 'DATE' ) {
-        my $epoch_date = str2time($value);
-        my $temp       = time2iso($epoch_date);
-        $temp = $s->{'dbh'}->quote($temp);
-
-        #my $temp = $s->{'dbh'}->quote($value);
-        $temp = "to_date($temp,'YYYY-MM-DD HH24:MI:SS')";
-        return $temp;
-    }
-    else {
-        $value = _encode( $s->{ENCODING}, $value ) if $s->{ENCODING};
-        $value = $s->{'dbh'}->quote($value);
-        return $value;
-    }
+    $value = _encode( $s->{ENCODING}, $value ) if $s->{ENCODING};
+    $value = $s->{'dbh'}->quote($value);
+    return $value;
 }
 
 sub _prepare {
