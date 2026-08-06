@@ -165,7 +165,7 @@ not provided, defaults are assumed.  The options are:
     standard error.  Higher values of DEBUG result in more verbose (and
     annoying) output.
 
-- WARN (default 1)
+- WARN (default 0)
 
     If set to a non-zero value, warns of illegal operations, such as
     attempting to delete the value of the key column.  If set to a zero
@@ -345,7 +345,7 @@ recover the object.
 
     These are low-level class methods.  Connect() is responsible for
     establishing the connection with the DBI database.  Errstr() and
-    error() return $DBI::errstr and $DBI::error respectively.  You may
+    error() return $DBI::errstr and $DBI::err respectively.  You
     may override these methods in subclasses if you wish.  For example,
     replace connect() with this code in order to use persistent database
     connections in Apache modules:
@@ -450,8 +450,6 @@ and cacheing raises a number of potential concurrency problems.
 
 Clearly you would not want to use this interface for applications that
 require a large number of updates to be processed rapidly.
-
-# BUGS
 
 # BUGS
 
